@@ -1,6 +1,7 @@
 import com.sun.source.tree.Tree;
 
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 class InvalidRequestException extends RuntimeException {
     public InvalidRequestException(int floor) {
@@ -12,9 +13,9 @@ public class Elevator implements Runnable{
     private Integer currFloor;
     private ElevatorState elevatorState;
     private State state;
-    private TreeSet<Integer> upStops;
-    private TreeSet<Integer> downStops;
-    private TreeSet<Integer> currentStops;
+    private ConcurrentSkipListSet<Integer> upStops;
+    private ConcurrentSkipListSet<Integer> downStops;
+    private ConcurrentSkipListSet<Integer> currentStops;
     private boolean isRunning;
 
     public Elevator(int id, int currFloor) {
@@ -22,37 +23,10 @@ public class Elevator implements Runnable{
         this.currFloor = currFloor;
         this.state = new IdleState();
         elevatorState = ElevatorState.IDLE;
-        upStops = new TreeSet<>();
-        downStops = new TreeSet<>();
-        currentStops = new TreeSet<>();
+        upStops = new ConcurrentSkipListSet<>();
+        downStops = new ConcurrentSkipListSet<>();
+        currentStops = new ConcurrentSkipListSet<>();
         isRunning = false;
-    }
-
-    public void handleExternalRequest(ExternalRequest request) {
-        if (Direction.UP.equals(request.getDirection())) {
-            handleUpRequest(request);
-        }
-        else {
-            handleDownRequest(request);
-        }
-
-    }
-
-    public void handleUpRequest(ExternalRequest request) {
-        synchronized (upStops) {
-            upStops.add(request.getFloor());
-            System.out.println("----- Request to go to floor " + request.getFloor() + " added -----");
-            upStops.notifyAll();
-        }
-    }
-
-    public void handleDownRequest(ExternalRequest request) {
-        synchronized (downStops) {
-            downStops.add(request.getFloor());
-            System.out.println("----- Request to go to floor " + request.getFloor() + " added -----");
-            downStops.notifyAll();
-
-        }
     }
 
     public void handleInternalRequest(InternalRequest request) {
@@ -79,6 +53,23 @@ public class Elevator implements Runnable{
         }
     }
 
+    public void handleExternalRequest(ExternalRequest request) {
+        if (Direction.UP.equals(request.getDirection())) {
+            synchronized (upStops) {
+                upStops.add(request.getFloor());
+                System.out.println("----- Request to go to floor " + request.getFloor() + " added -----");
+                upStops.notifyAll();
+            }
+        }
+        else {
+            synchronized (downStops) {
+                downStops.add(request.getFloor());
+                System.out.println("----- Request to go to floor " + request.getFloor() + " added -----");
+                downStops.notifyAll();
+            }
+        }
+    }
+
     public void move() {
         while (this.isRunning) {
             this.state.move(this);
@@ -88,7 +79,6 @@ public class Elevator implements Runnable{
                 Thread.currentThread().interrupt();
                 System.out.println("Elevator operation interrupted.");
             }
-//            System.out.println("Elevator state is " + this.state);
         }
     }
 
@@ -104,56 +94,13 @@ public class Elevator implements Runnable{
                 }
 
                 Integer targetFloor = upStops.ceiling(currFloor);
-                if (targetFloor == null) {
-                    targetFloor = upStops.last();
-                }
-
-                if (targetFloor.equals(currFloor)) {
-                    upStops.remove(targetFloor);
-                    System.out.println("----- Elevator " + id + "arrived at floor " + targetFloor + ", Opening Gate -----");
-                    return;
-                }
-
-                getIntermediateStops(currFloor, targetFloor); // populate currStops
-
-                Integer nextFloor = currentStops.ceiling(currFloor); // moving to the next
-
-                if (nextFloor == null) {
-                    nextFloor = currentStops.last();
-                }
-
-                System.out.println("Elevator " + id + " starting moving from " + currFloor + " to floor " + nextFloor);
-                currentStops.remove(nextFloor);
-                currFloor = nextFloor;
-
-                upStops.notifyAll();
+                checkUpFloors(targetFloor);
             }
         }
         else {
             synchronized (downStops) {
                 Integer targetFloor = downStops.last();
-                if (targetFloor == null) {
-                    targetFloor = downStops.first();
-                }
-
-                if (targetFloor.equals(currFloor)) {
-                    downStops.remove(targetFloor);
-                    System.out.println("----- Elevator " + id + "arrived at floor " + targetFloor + ", Opening Gate -----");
-                    return;
-                }
-
-                getIntermediateStops(currFloor, targetFloor);
-                Integer nextFloor = currentStops.floor(currFloor);
-
-                if (nextFloor == null) {
-                    nextFloor = currentStops.first();
-                }
-
-                System.out.println("Elevator " + id + "starting moving from " + currFloor + " to floor " + nextFloor);
-                currentStops.remove(nextFloor);
-                currFloor = nextFloor;
-
-                downStops.notifyAll();
+                checkDownFloors(targetFloor);
             }
         }
     }
@@ -170,67 +117,68 @@ public class Elevator implements Runnable{
                 }
 
                 Integer targetFloor = downStops.floor(currFloor);
-                if (targetFloor == null) {
-                    targetFloor = downStops.first();
-                }
-
-                if (targetFloor.equals(currFloor)) {
-                    downStops.remove(targetFloor);
-                    System.out.println("----- Elevator " + id + "arrived at floor " + targetFloor + ", Opening Gate -----");
-                    return;
-                }
-
-                getIntermediateStops(currFloor, targetFloor);
-
-                Integer nextFloor = currentStops.floor(currFloor);
-
-                if (nextFloor == null) {
-                    nextFloor = currentStops.first();
-                }
-
-                System.out.println("Elevator " + id + "starting moving from " + currFloor + " to floor " + nextFloor);
-                currentStops.remove(nextFloor);
-                currFloor = nextFloor;
-
-                downStops.notifyAll();
+                checkDownFloors(targetFloor);
             }
         }
         else {
             synchronized (upStops) {
                 Integer targetFloor = upStops.first();
-                if (targetFloor == null) {
-                    targetFloor = upStops.last();
-                }
-
-                if (targetFloor.equals(currFloor)) {
-                    upStops.remove(targetFloor);
-                    System.out.println("----- Elevator " + id + "arrived at floor " + targetFloor + ", Opening Gate -----");
-                    return;
-                }
-
-                getIntermediateStops(currFloor, targetFloor);
-                Integer nextFloor = currentStops.ceiling(currFloor);
-
-                if (nextFloor == null) {
-                    nextFloor = currentStops.last();
-                }
-
-                System.out.println("Elevator " + id + "starting moving from " + currFloor + " to floor " + nextFloor);
-                currentStops.remove(nextFloor);
-                currFloor = nextFloor;
-
-                upStops.notifyAll();
+                checkUpFloors(targetFloor);
             }
         }
     }
 
-    @Override
-    public void run() {
-        isRunning = true;
-        move();
+    private void checkUpFloors(Integer targetFloor) {
+        if (targetFloor == null) {
+            targetFloor = upStops.last();
+        }
+
+        if (targetFloor.equals(currFloor)) {
+            upStops.remove(targetFloor);
+            System.out.println("----- Elevator " + id + " arrived at floor " + targetFloor + ", Opening Gate -----");
+            return;
+        }
+
+        getIntermediateStops(currFloor, targetFloor);
+        Integer nextFloor = currentStops.ceiling(currFloor);
+
+        if (nextFloor == null) {
+            nextFloor = currentStops.last();
+        }
+
+        System.out.println("Elevator " + id + " starting moving from " + currFloor + " to floor " + nextFloor);
+        currentStops.remove(nextFloor);
+        currFloor = nextFloor;
+
+        upStops.notifyAll();
     }
 
-    public void getIntermediateStops(int currFloor, int nextFloor) {
+    private void checkDownFloors(Integer targetFloor) {
+        if (targetFloor == null) {
+            targetFloor = downStops.first();
+        }
+
+        if (targetFloor.equals(currFloor)) {
+            downStops.remove(targetFloor);
+            System.out.println("----- Elevator " + id + " arrived at floor " + targetFloor + ", Opening Gate -----");
+            return;
+        }
+
+        getIntermediateStops(currFloor, targetFloor);
+        Integer nextFloor = currentStops.floor(currFloor);
+
+        if (nextFloor == null) {
+            nextFloor = currentStops.first();
+        }
+
+        System.out.println("Elevator " + id + " starting moving from " + currFloor + " to floor " + nextFloor);
+        currentStops.remove(nextFloor);
+        currFloor = nextFloor;
+
+        downStops.notifyAll();
+    }
+
+    private void getIntermediateStops(int currFloor, int nextFloor) {
         if (currFloor == nextFloor)
             return;
 
@@ -251,6 +199,11 @@ public class Elevator implements Runnable{
         }
     }
 
+    @Override
+    public void run() {
+        isRunning = true;
+        move();
+    }
 
     public int getCurrFloor() {
         return currFloor;
@@ -276,27 +229,27 @@ public class Elevator implements Runnable{
         this.elevatorState = elevatorState;
     }
 
-    public TreeSet<Integer> getUpStops() {
+    public ConcurrentSkipListSet<Integer> getUpStops() {
         return upStops;
     }
 
-    public void setUpStops(TreeSet<Integer> upStops) {
+    public void setUpStops(ConcurrentSkipListSet<Integer> upStops) {
         this.upStops = upStops;
     }
 
-    public TreeSet<Integer> getDownStops() {
+    public ConcurrentSkipListSet<Integer> getDownStops() {
         return downStops;
     }
 
-    public void setDownStops(TreeSet<Integer> downStops) {
+    public void setDownStops(ConcurrentSkipListSet<Integer> downStops) {
         this.downStops = downStops;
     }
 
-    public TreeSet<Integer> getCurrentStops() {
+    public ConcurrentSkipListSet<Integer> getCurrentStops() {
         return currentStops;
     }
 
-    public void setCurrentStops(TreeSet<Integer> currentStops) {
+    public void setCurrentStops(ConcurrentSkipListSet<Integer> currentStops) {
         this.currentStops = currentStops;
     }
 }

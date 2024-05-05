@@ -48,7 +48,7 @@ public class ElevatorSystem implements Runnable{
                 best = i;
             }
         }
-        System.out.println("Elevator " + best + " accept the task");
+        System.out.println("Elevator " + best + " accept the task, Going " + elevators.get(best).getElevatorState());
         return best;
     }
 
