@@ -1,11 +1,13 @@
 public class Driver {
     public static void main(String[] args) {
-        ElevatorSystem elevatorSystem = ElevatorSystem.getInstance();
+        Elevator elevator = new Elevator(0);
+        ElevatorSystem elevatorSystem = ElevatorSystem.getInstance(elevator);
 
-        elevatorSystem.handleExternalRequest(new ExternalRequest(5, Direction.UP));
-        elevatorSystem.handleInternalRequest(new InternalRequest(7));
-        elevatorSystem.handleExternalRequest(new ExternalRequest(6, Direction.UP));
-        elevatorSystem.handleExternalRequest(new ExternalRequest(7, Direction.DOWN));
-        elevatorSystem.handleExternalRequest(new ExternalRequest(8, Direction.UP));
+
+        Thread elevatorSystemThread = new Thread(elevatorSystem);
+        Thread elevatorThread = new Thread(elevatorSystem.getElevator());
+
+        elevatorThread.start();
+        elevatorSystemThread.start();
     }
 }

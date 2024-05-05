@@ -6,25 +6,19 @@ class UpState implements State {
 
     @Override
     public void move(Elevator elevator) {
-        Integer nextLevel = null;
-        if (!elevator.getUpStops().isEmpty()) {
-            nextLevel = elevator.getUpStops().ceiling(elevator.getCurrFloor());
-            System.out.println("Moving to level: " + nextLevel);
-            elevator.getUpStops().remove(nextLevel);
+        if (elevator.getUpStops().ceiling(elevator.getCurrFloor()) != null) {
+            elevator.movingUp();
         }
-        else if (!elevator.getDownStops().isEmpty()) {
-            nextLevel = elevator.getDownStops().first();
-            System.out.println("Moving to level: " + nextLevel);
-            elevator.getDownStops().remove(nextLevel);
+        else if (elevator.getDownStops().floor(elevator.getCurrFloor()) != null) {
             elevator.setState(new DownState());
+            elevator.movingDown();
+        }
+        else if (!elevator.getUpStops().isEmpty() || !elevator.getCurrentStops().isEmpty()) {
+            elevator.movingDown();
         }
         else {
             elevator.setState(new IdleState());
-            return;
         }
-
-        elevator.setCurrFloor(nextLevel);
-        elevator.openGate();
     }
 }
 
@@ -32,25 +26,20 @@ class DownState implements State {
 
     @Override
     public void move(Elevator elevator) {
-        Integer nextLevel = null;
-        if (!elevator.getDownStops().isEmpty()) {
-            nextLevel = elevator.getDownStops().floor(elevator.getCurrFloor());
-            System.out.println("Moving to level: " + nextLevel);
-            elevator.getUpStops().remove(nextLevel);
+
+        if (elevator.getDownStops().floor(elevator.getCurrFloor()) != null) {
+            elevator.movingDown();
         }
-        else if (!elevator.getUpStops().isEmpty()) {
-            nextLevel = elevator.getUpStops().first();
-            System.out.println("Moving to level: " + nextLevel);
-            elevator.getDownStops().remove(nextLevel);
+        else if (elevator.getUpStops().ceiling(elevator.getCurrFloor()) != null) {
             elevator.setState(new UpState());
+            elevator.movingUp();
+        }
+        else if (!elevator.getDownStops().isEmpty()  || !elevator.getCurrentStops().isEmpty()) {
+            elevator.movingUp();
         }
         else {
             elevator.setState(new IdleState());
-            return;
         }
-
-        elevator.setCurrFloor(nextLevel);
-        elevator.openGate();
     }
 }
 
@@ -58,26 +47,20 @@ class IdleState implements State {
 
     @Override
     public void move(Elevator elevator) {
-        Integer nextLevel = null;
-        if (!elevator.getUpStops().isEmpty()) {
-            nextLevel = elevator.getUpStops().first();
-            System.out.println("Moving to level: " + nextLevel);
-            elevator.getUpStops().remove(nextLevel);
+        if (elevator.getUpStops().ceiling(elevator.getCurrFloor()) != null) {
             elevator.setState(new UpState());
+            elevator.movingUp();
         }
-        else if (!elevator.getDownStops().isEmpty()) {
-            nextLevel = elevator.getDownStops().first();
-            System.out.println("Moving to level: " + nextLevel);
-            elevator.getDownStops().remove(nextLevel);
+        else if (elevator.getDownStops().floor(elevator.getCurrFloor()) != null) {
             elevator.setState(new DownState());
+            elevator.movingDown();
         }
-        else {
-            System.out.println("No stop left, stay at " + elevator.getCurrFloor());
-            return;
+        else if (!elevator.getUpStops().isEmpty() || !elevator.getCurrentStops().isEmpty()) {
+            elevator.movingDown();
         }
-
-        System.out.println("Reaching at " + nextLevel + ", opening door");
-        elevator.setCurrFloor(nextLevel);
-        elevator.openGate();
+        else if (!elevator.getDownStops().isEmpty()  || !elevator.getCurrentStops().isEmpty()) {
+            elevator.movingUp();
+        }
     }
+
 }
