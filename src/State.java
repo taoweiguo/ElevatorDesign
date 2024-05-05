@@ -49,17 +49,16 @@ class IdleState implements State {
     public void move(Elevator elevator) {
         if (elevator.getUpStops().ceiling(elevator.getCurrFloor()) != null) {
             elevator.setState(new UpState());
-            elevator.movingUp();
         }
         else if (elevator.getDownStops().floor(elevator.getCurrFloor()) != null) {
             elevator.setState(new DownState());
-            elevator.movingDown();
         }
+
         else if (!elevator.getUpStops().isEmpty() || !elevator.getCurrentStops().isEmpty()) {
-            elevator.movingDown();
+            elevator.setState(new UpState());
         }
         else if (!elevator.getDownStops().isEmpty()  || !elevator.getCurrentStops().isEmpty()) {
-            elevator.movingUp();
+            elevator.setState(new DownState());
         }
     }
 

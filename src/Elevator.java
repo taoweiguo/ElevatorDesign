@@ -2,18 +2,13 @@ import com.sun.source.tree.Tree;
 
 import java.util.TreeSet;
 
-enum ElevatorState {
-    UP,
-    DOWN,
-    IDLE,
-}
-
 class InvalidRequestException extends RuntimeException {
     public InvalidRequestException(int floor) {
     }
 }
 
 public class Elevator implements Runnable{
+    private int id;
     private Integer currFloor;
     private ElevatorState elevatorState;
     private State state;
@@ -22,7 +17,8 @@ public class Elevator implements Runnable{
     private TreeSet<Integer> currentStops;
     private boolean isRunning;
 
-    public Elevator(int currFloor) {
+    public Elevator(int id, int currFloor) {
+        this.id = id;
         this.currFloor = currFloor;
         this.state = new IdleState();
         elevatorState = ElevatorState.IDLE;
@@ -45,7 +41,7 @@ public class Elevator implements Runnable{
     public void handleUpRequest(ExternalRequest request) {
         synchronized (upStops) {
             upStops.add(request.getFloor());
-            System.out.println("Request to go to floor " + request.getFloor() + " added");
+            System.out.println("----- Request to go to floor " + request.getFloor() + " added -----");
             upStops.notifyAll();
         }
     }
@@ -53,7 +49,7 @@ public class Elevator implements Runnable{
     public void handleDownRequest(ExternalRequest request) {
         synchronized (downStops) {
             downStops.add(request.getFloor());
-            System.out.println("Request to go to floor " + request.getFloor() + " added");
+            System.out.println("----- Request to go to floor " + request.getFloor() + " added -----");
             downStops.notifyAll();
 
         }
@@ -114,7 +110,7 @@ public class Elevator implements Runnable{
 
                 if (targetFloor.equals(currFloor)) {
                     upStops.remove(targetFloor);
-                    System.out.println("----- Arrived at floor " + targetFloor + ", Opening Gate -----");
+                    System.out.println("----- Elevator " + id + "arrived at floor " + targetFloor + ", Opening Gate -----");
                     return;
                 }
 
@@ -126,7 +122,7 @@ public class Elevator implements Runnable{
                     nextFloor = currentStops.last();
                 }
 
-                System.out.println("Starting moving from " + currFloor + " to floor " + nextFloor);
+                System.out.println("Elevator " + id + " starting moving from " + currFloor + " to floor " + nextFloor);
                 currentStops.remove(nextFloor);
                 currFloor = nextFloor;
 
@@ -142,7 +138,7 @@ public class Elevator implements Runnable{
 
                 if (targetFloor.equals(currFloor)) {
                     downStops.remove(targetFloor);
-                    System.out.println("----- Arrived at floor " + targetFloor + ", Opening Gate -----");
+                    System.out.println("----- Elevator " + id + "arrived at floor " + targetFloor + ", Opening Gate -----");
                     return;
                 }
 
@@ -153,7 +149,7 @@ public class Elevator implements Runnable{
                     nextFloor = currentStops.first();
                 }
 
-                System.out.println("Starting moving from " + currFloor + " to floor " + nextFloor);
+                System.out.println("Elevator " + id + "starting moving from " + currFloor + " to floor " + nextFloor);
                 currentStops.remove(nextFloor);
                 currFloor = nextFloor;
 
@@ -180,7 +176,7 @@ public class Elevator implements Runnable{
 
                 if (targetFloor.equals(currFloor)) {
                     downStops.remove(targetFloor);
-                    System.out.println("----- Arrived at floor " + targetFloor + ", Opening Gate -----");
+                    System.out.println("----- Elevator " + id + "arrived at floor " + targetFloor + ", Opening Gate -----");
                     return;
                 }
 
@@ -192,7 +188,7 @@ public class Elevator implements Runnable{
                     nextFloor = currentStops.first();
                 }
 
-                System.out.println("Starting moving from " + currFloor + " to floor " + nextFloor);
+                System.out.println("Elevator " + id + "starting moving from " + currFloor + " to floor " + nextFloor);
                 currentStops.remove(nextFloor);
                 currFloor = nextFloor;
 
@@ -208,7 +204,7 @@ public class Elevator implements Runnable{
 
                 if (targetFloor.equals(currFloor)) {
                     upStops.remove(targetFloor);
-                    System.out.println("----- Arrived at floor " + targetFloor + ", Opening Gate -----");
+                    System.out.println("----- Elevator " + id + "arrived at floor " + targetFloor + ", Opening Gate -----");
                     return;
                 }
 
@@ -219,7 +215,7 @@ public class Elevator implements Runnable{
                     nextFloor = currentStops.last();
                 }
 
-                System.out.println("Starting moving from " + currFloor + " to floor " + nextFloor);
+                System.out.println("Elevator " + id + "starting moving from " + currFloor + " to floor " + nextFloor);
                 currentStops.remove(nextFloor);
                 currFloor = nextFloor;
 
@@ -270,6 +266,14 @@ public class Elevator implements Runnable{
 
     public void setState(State state) {
         this.state = state;
+    }
+
+    public ElevatorState getElevatorState() {
+        return elevatorState;
+    }
+
+    public void setElevatorState(ElevatorState elevatorState) {
+        this.elevatorState = elevatorState;
     }
 
     public TreeSet<Integer> getUpStops() {
